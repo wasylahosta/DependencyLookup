@@ -1,10 +1,3 @@
-//
-//  TestCase.swift
-//  
-//
-//  Created by Vasyl Ahosta on 04.10.2020.
-//
-
 import XCTest
 
 class TestCase: XCTestCase {
