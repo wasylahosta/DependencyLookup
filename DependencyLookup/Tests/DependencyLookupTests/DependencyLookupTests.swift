@@ -2,6 +2,7 @@ import XCTest
 @testable import DependencyLookup
 
 private var localDependencyLookup: DependencyLookup!
+private let someDOCSubKey = "some sub-key"
 
 final class DependencyLookupTests: TestCase {
     
@@ -40,10 +41,29 @@ final class DependencyLookupTests: TestCase {
     }
     
     func testShouldInjectDOCRegisteredInSharedDependencyLookup() {
-        let (dependencyLookup, doc) = makeDependencyLookupWithRegisteredDOCInstance()
-        SharedDependencyLookup.shared = dependencyLookup
+        let (_, doc) = makeSharedDependencyLookupWithRegisteredDOCInstance()
         
         let client = ClientUsingSharedDependencyLookup()
+        
+        XCTAssertTrue(doc === client.doc, "Wrong instance")
+    }
+    
+    func testShouldInjectDOCRegisteredByTypeAndKeyInSharedDependencyLookup() {
+        let (dependencyLookup, _) = makeSharedDependencyLookupWithRegisteredDOCInstance()
+        let docForKey: DOC = DOCImpl()
+        dependencyLookup.register(docForKey, for: someDOCSubKey)
+        
+        let client = ClientUsingSharedDependencyLookupAndKey()
+        
+        XCTAssertTrue(docForKey === client.doc, "Wrong instance")
+    }
+    
+    func testShouldBeAbleToResetInjectedDOC() {
+        let _ = makeSharedDependencyLookupWithRegisteredDOCInstance()
+        
+        let client = ClientUsingSharedDependencyLookup()
+        let doc = DOCImpl()
+        client.doc = doc
         
         XCTAssertTrue(doc === client.doc, "Wrong instance")
     }
@@ -59,6 +79,12 @@ private extension DependencyLookupTests {
         let dependencyLookup = makeDependencyLookup()
         let doc = DOCImpl()
         dependencyLookup.register(doc as DOC)
+        return (dependencyLookup, doc)
+    }
+    
+    func makeSharedDependencyLookupWithRegisteredDOCInstance() -> (DependencyLookup, DOC) {
+        let (dependencyLookup, doc) = makeDependencyLookupWithRegisteredDOCInstance()
+        SharedDependencyLookup.shared = dependencyLookup
         return (dependencyLookup, doc)
     }
 }
@@ -78,5 +104,11 @@ final class ClientUsingLocalDependencyLookup {
 final class ClientUsingSharedDependencyLookup {
     
     @Injected
+    var doc: DOC
+}
+
+final class ClientUsingSharedDependencyLookupAndKey {
+    
+    @Injected(for: someDOCSubKey)
     var doc: DOC
 }
