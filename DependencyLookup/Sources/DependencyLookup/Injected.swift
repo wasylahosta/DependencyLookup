@@ -11,11 +11,7 @@ struct Injected<T> {
     }
     
     var wrappedValue: T {
-        get {
-            return value
-        }
-        set {
-            value = newValue
-        }
+        get { return value }
+        set { value = newValue }
     }
 }

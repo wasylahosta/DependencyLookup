@@ -67,6 +67,25 @@ final class DependencyLookupTests: TestCase {
         
         XCTAssertTrue(doc === client.doc, "Wrong instance")
     }
+    
+    func testShouldRegisterBuildingClosureThatCreatesNewInstancesOnFetch() throws {
+        let dependencyLookup = makeDependencyLookup()
+        
+        let builder = { DOCImpl() as DOC }
+        dependencyLookup.register(builder, for: someDOCSubKey)
+        
+        let firstDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
+        let secondDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
+        XCTAssertFalse(firstDOCInstance === secondDOCInstance, "Should create new instance each time")
+    }
+    
+    func testShouldInjectDependencyRegisteredUsingBuildingClosure() {
+        let dependencyLookup = makeDependencyLookup()
+        SharedDependencyLookup.shared = dependencyLookup
+        let builder = { DOCImpl() as DOC }
+        dependencyLookup.register(builder)
+        _ = ClientUsingSharedDependencyLookup()
+    }
 }
 
 private extension DependencyLookupTests {

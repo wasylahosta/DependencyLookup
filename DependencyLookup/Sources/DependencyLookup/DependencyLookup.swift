@@ -1,18 +1,25 @@
 
 class DependencyLookup {
     
+    typealias Builder<T> = () -> T
+    
     private var registry: [String: Any] = [:]
     
     func fetch<T>(for subKey: String? = nil) throws -> T {
-        if let dependency = registry[makeKey(for: T.self, subKey)] as? T {
-            return dependency
-        } else {
-            throw DependencyLookupError.notFound(T.self)
+        let key = makeKey(for: T.self, subKey)
+        switch registry[key] {
+        case let dependency as T: return dependency
+        case let builder as Builder<T>: return builder()
+        default: throw DependencyLookupError.notFound(T.self)
         }
     }
     
     func register<T>(_ dependency: T, for subKey: String? = nil) {
         registry[makeKey(for: T.self, subKey)] = dependency
+    }
+    
+    func register<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) {
+        registry[makeKey(for: T.self, subKey)] = builder
     }
     
     private func makeKey<T>(for type: T.Type, _ subKey: String? = nil) -> String {
