@@ -1,10 +1,15 @@
 import XCTest
-@testable import DependencyLookup
+import DependencyLookup
 
 private var localDependencyLookup: DependencyLookup!
-private let someDOCSubKey = "some sub-key"
+let someDOCSubKey = "some sub-key"
 
 final class DependencyLookupTests: TestCase {
+    
+    override func setUp() {
+        super.setUp()
+        DependencyLookup.default = DependencyLookup()
+    }
     
     func testFetch_WhenDoesNotContainInstanceThenShouldReturnNotFoundError() {
         let dependencyLookup = makeDependencyLookup()
@@ -37,28 +42,28 @@ final class DependencyLookupTests: TestCase {
         XCTAssertTrue(doc === client.doc)
     }
     
-    func testShouldInjectDOCRegisteredInSharedDependencyLookup() throws {
-        let (_, doc) = try makeSharedDependencyLookupWithRegisteredDOCInstance()
+    func testShouldInjectDOCRegisteredInDefaultDependencyLookup() throws {
+        let doc = try makeDOCRegisteredInDefaultDependencyLookup()
         
-        let client = ClientUsingSharedDependencyLookup()
+        let client = ClientUsingDefaultDependencyLookup()
         
         XCTAssertTrue(doc === client.doc, "Wrong instance")
     }
     
     func testShouldInjectDOCRegisteredByTypeAndKeyInSharedDependencyLookup() throws {
-        let (dependencyLookup, _) = try makeSharedDependencyLookupWithRegisteredDOCInstance()
+        let _ = try makeDOCRegisteredInDefaultDependencyLookup()
         let docForKey: DOC = DOCImpl()
-        try dependencyLookup.register(docForKey, for: someDOCSubKey)
+        try DependencyLookup.default.register(docForKey, for: someDOCSubKey)
         
-        let client = ClientUsingSharedDependencyLookupAndKey()
+        let client = ClientUsingDefaultDependencyLookupAndKey()
         
         XCTAssertTrue(docForKey === client.doc, "Wrong instance")
     }
     
     func testShouldBeAbleToResetInjectedDOC() throws {
-        let _ = try makeSharedDependencyLookupWithRegisteredDOCInstance()
+        let _ = try makeDOCRegisteredInDefaultDependencyLookup()
         
-        let client = ClientUsingSharedDependencyLookup()
+        let client = ClientUsingDefaultDependencyLookup()
         let doc = DOCImpl()
         client.doc = doc
         
@@ -77,11 +82,9 @@ final class DependencyLookupTests: TestCase {
     }
     
     func testShouldInjectDependencyRegisteredUsingBuildingClosure() throws {
-        let dependencyLookup = makeDependencyLookup()
-        SharedDependencyLookup.shared = dependencyLookup
         let builder = { DOCImpl() as DOC }
-        try dependencyLookup.register(builder)
-        _ = ClientUsingSharedDependencyLookup()
+        try DependencyLookup.default.register(builder)
+        _ = ClientUsingDefaultDependencyLookup()
     }
     
     func testGiveHasRegisteredDOCWhenCalledRegisterWithDOCOfTheSameTypeAndSubKeyThenThrowImplicitOverwriteError() throws {
@@ -129,10 +132,10 @@ private extension DependencyLookupTests {
         return (dependencyLookup, doc)
     }
     
-    func makeSharedDependencyLookupWithRegisteredDOCInstance() throws -> (DependencyLookup, DOC) {
-        let (dependencyLookup, doc) = try makeDependencyLookupWithRegisteredDOCInstance()
-        SharedDependencyLookup.shared = dependencyLookup
-        return (dependencyLookup, doc)
+    func makeDOCRegisteredInDefaultDependencyLookup() throws -> DOC {
+        let doc = DOCImpl()
+        try DependencyLookup.default.register(doc as DOC)
+        return doc
     }
     
     func assert<T>(_ dependencyLookup: DependencyLookup, contains dependency: T, for subKey: String? = nil, line: UInt = #line) throws {
@@ -153,13 +156,13 @@ final class ClientUsingLocalDependencyLookup {
     var doc: DOC
 }
 
-final class ClientUsingSharedDependencyLookup {
+final class ClientUsingDefaultDependencyLookup {
     
     @Injected
     var doc: DOC
 }
 
-final class ClientUsingSharedDependencyLookupAndKey {
+final class ClientUsingDefaultDependencyLookupAndKey {
     
     @Injected(for: someDOCSubKey)
     var doc: DOC
