@@ -1,11 +1,11 @@
 
 @propertyWrapper
-public struct Injected<T> {
+public struct Inject<T> {
     
     private let dependencyLookup: DependencyLookup
     private var value: T
     
-    public init(_ dependencyLookup: DependencyLookup = .default, for subKey: String? = nil) {
+    public init(from dependencyLookup: DependencyLookup = .default, forSubKey subKey: String? = nil) {
         self.dependencyLookup = dependencyLookup
         value = try! dependencyLookup.fetch(for: subKey)
     }

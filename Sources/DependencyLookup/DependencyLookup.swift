@@ -21,27 +21,27 @@ open class DependencyLookup {
     
     open func register<T>(_ dependency: T, for subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
-        try verifyDoesNotHaveRegistration(for: key)
+        try verifyDoesNotHaveAnyRegistration(for: key)
         registry[key] = dependency
     }
     
     open func register<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
-        try verifyDoesNotHaveRegistration(for: key)
+        try verifyDoesNotHaveAnyRegistration(for: key)
         registry[key] = builder
     }
 
-    private func verifyDoesNotHaveRegistration(for key: String) throws {
+    private func verifyDoesNotHaveAnyRegistration(for key: String) throws {
         guard registry[key] == nil else {
             throw DependencyLookupError.ImplicitOverwrite()
         }
     }
 
-    open func replace<T>(with dependency: T, for subKey: String? = nil) {
+    open func set<T>(_ dependency: T, for subKey: String? = nil) {
         registry[makeKey(for: T.self, subKey)] = dependency
     }
 
-    open func replace<T>(with builder: @escaping Builder<T>, for subKey: String? = nil) {
+    open func set<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) {
         registry[makeKey(for: T.self, subKey)] = builder
     }
     
@@ -75,7 +75,7 @@ public enum DependencyLookupError {
         }
 
         public var description: String {
-            return "To explicitly replace dependency use: replace(with: for:)"
+            return "To explicitly replace dependency use: set(_: for:)"
         }
     }
 }

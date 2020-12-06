@@ -101,7 +101,7 @@ final class DependencyLookupTests: TestCase {
     func testGivenHasRegisteredDependencyWheCalledReplaceThenShouldSetTheNewInstance() throws {
         let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
         let newDOC: DOC = DOCImpl()
-        dependencyLookup.replace(with: newDOC, for: someDOCSubKey)
+        dependencyLookup.set(newDOC, for: someDOCSubKey)
         try assert(dependencyLookup, contains: newDOC, for: someDOCSubKey)
     }
 
@@ -109,12 +109,12 @@ final class DependencyLookupTests: TestCase {
         let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
         let newDOC: DOC = DOCImpl()
         let builder = { newDOC }
-        dependencyLookup.replace(with: builder, for: someDOCSubKey)
+        dependencyLookup.set(builder, for: someDOCSubKey)
         try assert(dependencyLookup, contains: newDOC, for: someDOCSubKey)
     }
     
     func testImplicitOverwriteErrorDescription() {
-        let expectedDescription = "To explicitly replace dependency use: replace(with: for:)"
+        let expectedDescription = "To explicitly replace dependency use: set(_: for:)"
         XCTAssertEqual(expectedDescription, DependencyLookupError.ImplicitOverwrite().description)
     }
 }
@@ -152,18 +152,18 @@ final class DOCImpl: DOC {
 
 final class ClientUsingLocalDependencyLookup {
     
-    @Injected(localDependencyLookup)
+    @Inject(from: localDependencyLookup)
     var doc: DOC
 }
 
 final class ClientUsingDefaultDependencyLookup {
     
-    @Injected
+    @Inject
     var doc: DOC
 }
 
 final class ClientUsingDefaultDependencyLookupAndKey {
     
-    @Injected(for: someDOCSubKey)
+    @Inject(forSubKey: someDOCSubKey)
     var doc: DOC
 }
