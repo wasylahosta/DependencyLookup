@@ -3,15 +3,21 @@
 public struct Inject<T> {
     
     private let dependencyLookup: DependencyLookup
-    private var value: T
+    private let subKey: String?
+    private var value: T!
     
     public init(from dependencyLookup: DependencyLookup = .default, forSubKey subKey: String? = nil) {
         self.dependencyLookup = dependencyLookup
-        value = try! dependencyLookup.fetch(for: subKey)
+        self.subKey = subKey
     }
     
     public var wrappedValue: T {
-        get { return value }
+        mutating get {
+            if value == nil {
+                value = try! dependencyLookup.fetch(for: subKey) as T
+            }
+            return value
+        }
         set { value = newValue }
     }
 }

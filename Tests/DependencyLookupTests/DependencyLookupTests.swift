@@ -98,14 +98,14 @@ final class DependencyLookupTests: TestCase {
         assert(try dependencyLookup.register(builder), throws: DependencyLookupError.ImplicitOverwrite())
     }
 
-    func testGivenHasRegisteredDependencyWheCalledReplaceThenShouldSetTheNewInstance() throws {
+    func testGivenHasRegisteredDependencyWhenCalledSetThenShouldSetTheNewInstance() throws {
         let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
         let newDOC: DOC = DOCImpl()
         dependencyLookup.set(newDOC, for: someDOCSubKey)
         try assert(dependencyLookup, contains: newDOC, for: someDOCSubKey)
     }
 
-    func testGivenHasRegisteredDependencyWheCalledReplaceThenShouldSetBuildingClosure() throws {
+    func testGivenHasRegisteredDependencyWhenCalledSetThenShouldSetBuildingClosure() throws {
         let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
         let newDOC: DOC = DOCImpl()
         let builder = { newDOC }
@@ -116,6 +116,24 @@ final class DependencyLookupTests: TestCase {
     func testImplicitOverwriteErrorDescription() {
         let expectedDescription = "To explicitly replace dependency use: set(_: for:)"
         XCTAssertEqual(expectedDescription, DependencyLookupError.ImplicitOverwrite().description)
+    }
+    
+    func testInject_ShouldUseLazyFetch() throws {
+        let dependencyLookup = makeDependencyLookup()
+        DependencyLookup.default = dependencyLookup
+        var invokeBuilderCounter = 0
+        let builder = { () -> DOC in
+            invokeBuilderCounter += 1
+            return DOCImpl() as DOC
+        }
+        try dependencyLookup.register(builder)
+        
+        let client = ClientUsingDefaultDependencyLookup()
+        
+        XCTAssertEqual(0, invokeBuilderCounter, "Should not call fetch at initialisation phase")
+        _ = client.doc
+        _ = client.doc
+        XCTAssertEqual(1, invokeBuilderCounter, "Should call fetch only once when accessed doc for the first time")
     }
 }
 
