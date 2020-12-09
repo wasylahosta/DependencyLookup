@@ -1,6 +1,11 @@
 
 open class DependencyLookup {
     
+    public enum Scope {
+        case singleton
+        case prototype
+    }
+    
     public static var `default`: DependencyLookup = DependencyLookup()
     
     public typealias Builder<T> = () -> T
@@ -19,12 +24,34 @@ open class DependencyLookup {
         }
     }
     
+    open func register<T>(_ dependency: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) throws {
+        let key = makeKey(for: T.self, subKey)
+        try verifyDoesNotHaveAnyRegistration(for: key)
+        set(dependency, scope: scope, for: key)
+    }
+    
+    open func set<T>(_ dependency: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) {
+        let key = makeKey(for: T.self, subKey)
+        set(dependency, scope: scope, for: key)
+    }
+    
+    private func set<T>(_ dependency: @escaping Builder<T>, scope: Scope, for key: String) {
+        switch scope {
+        case .singleton:
+            registry[key] = dependency()
+        case .prototype:
+            registry[key] = dependency
+        }
+    }
+    
+    @available(*, deprecated, message: "Obsolete")
     open func register<T>(_ dependency: T, for subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
         try verifyDoesNotHaveAnyRegistration(for: key)
         registry[key] = dependency
     }
     
+    @available(*, deprecated, message: "Obsolete")
     open func register<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
         try verifyDoesNotHaveAnyRegistration(for: key)
@@ -37,10 +64,12 @@ open class DependencyLookup {
         }
     }
 
+    @available(*, deprecated, message: "Obsolete")
     open func set<T>(_ dependency: T, for subKey: String? = nil) {
         registry[makeKey(for: T.self, subKey)] = dependency
     }
 
+    @available(*, deprecated, message: "Obsolete")
     open func set<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) {
         registry[makeKey(for: T.self, subKey)] = builder
     }
