@@ -114,15 +114,15 @@ final class DependencyLookupTests: TestCase {
     
     func testShouldRegisterBuildingClosureThatCreatesNewInstancesOnFetch() throws {
         let dependencyLookup = makeDependencyLookup()
-        
+
         let builder = { DOCImpl() as DOC }
         try dependencyLookup.register(builder, for: someDOCSubKey)
-        
+
         let firstDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
         let secondDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
         XCTAssertFalse(firstDOCInstance === secondDOCInstance, "Should create new instance each time")
     }
-    
+
     func testGivenHasRegisteredDependencyWhenCalledSetThenShouldSetBuildingClosure() throws {
         let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
         let newDOC: DOC = DOCImpl()
@@ -158,7 +158,7 @@ final class DependencyLookupTests: TestCase {
     func testShouldInjectDOCRegisteredByTypeAndKeyInSharedDependencyLookup() throws {
         let _ = try makeDOCRegisteredInDefaultDependencyLookup()
         let docForKey: DOC = DOCImpl()
-        try DependencyLookup.default.register(docForKey, for: someDOCSubKey)
+        try DependencyLookup.default.register(docForKey, scope: .singleton, forSubKey: someDOCSubKey)
         
         let client = ClientUsingDefaultDependencyLookupAndKey()
         
@@ -175,10 +175,10 @@ final class DependencyLookupTests: TestCase {
         XCTAssertTrue(doc === client.doc, "Wrong instance")
     }
     
-    func testShouldInjectDependencyRegisteredUsingBuildingClosure() throws {
-        let builder = { DOCImpl() as DOC }
-        try DependencyLookup.default.register(builder)
-        _ = ClientUsingDefaultDependencyLookup()
+    func testShouldInjectDependencyRegisteredWithPrototypeScope() throws {
+        try DependencyLookup.default.register(DOCImpl() as DOC, scope: .prototype)
+        let client = ClientUsingDefaultDependencyLookup()
+        _ = client.doc
     }
     
     func testInject_ShouldUseLazyFetch() throws {
