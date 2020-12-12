@@ -18,29 +18,29 @@ open class DependencyLookup {
     open func fetch<T>(for subKey: String? = nil) throws -> T {
         let key = makeKey(for: T.self, subKey)
         switch registry[key] {
-        case let dependency as T: return dependency
-        case let builder as Builder<T>: return builder()
+        case let singleton as LazySingletonHolder<T>: return singleton.instance
+        case let prototype as Builder<T>: return prototype()
         default: throw DependencyLookupError.NotFound(type: T.self)
         }
     }
     
-    open func register<T>(_ dependency: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) throws {
+    open func register<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
         try verifyDoesNotHaveAnyRegistration(for: key)
-        set(dependency, scope: scope, for: key)
+        set(dependencyBuilder, scope: scope, for: key)
     }
     
-    open func set<T>(_ dependency: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) {
+    open func set<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) {
         let key = makeKey(for: T.self, subKey)
-        set(dependency, scope: scope, for: key)
+        set(dependencyBuilder, scope: scope, for: key)
     }
     
-    private func set<T>(_ dependency: @escaping Builder<T>, scope: Scope, for key: String) {
+    private func set<T>(_ dependencyBuilder: @escaping Builder<T>, scope: Scope, for key: String) {
         switch scope {
         case .singleton:
-            registry[key] = dependency()
+            registry[key] = LazySingletonHolder(dependencyBuilder)
         case .prototype:
-            registry[key] = dependency
+            registry[key] = dependencyBuilder
         }
     }
 
@@ -56,6 +56,16 @@ open class DependencyLookup {
             return typeKey + key
         }
         return typeKey
+    }
+    
+    private final class LazySingletonHolder<T> {
+        
+        private(set) lazy var instance: T = builder()
+        private let builder: Builder<T>
+        
+        init(_ builder: @escaping Builder<T>) {
+            self.builder = builder
+        }
     }
 }
 

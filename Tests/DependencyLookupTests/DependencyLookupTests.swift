@@ -91,7 +91,7 @@ final class DependencyLookupTests: TestCase {
         XCTAssertEqual(expectedDescription, DependencyLookupError.ImplicitOverwrite().description)
     }
     
-    func _testSingletonScope_ShouldInstantiateDependencyOnFirstFetch() throws {
+    func testSingletonScope_ShouldInstantiateDependencyOnFirstFetch() throws {
         let dependencyLookup = makeDependencyLookup()
         var newInstanceCounter = 0
         try dependencyLookup.register(DOCImpl({
