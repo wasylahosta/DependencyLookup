@@ -1,6 +1,11 @@
 
 open class DependencyLookup {
     
+    public enum Scope {
+        case singleton
+        case prototype
+    }
+    
     public static var `default`: DependencyLookup = DependencyLookup()
     
     public typealias Builder<T> = () -> T
@@ -10,39 +15,39 @@ open class DependencyLookup {
     public init() {
     }
     
-    open func fetch<T>(for subKey: String? = nil) throws -> T {
+    open func fetch<T>(forSubKey subKey: String? = nil) throws -> T {
         let key = makeKey(for: T.self, subKey)
         switch registry[key] {
-        case let dependency as T: return dependency
-        case let builder as Builder<T>: return builder()
+        case let singleton as LazySingletonHolder<T>: return singleton.instance
+        case let prototype as Builder<T>: return prototype()
         default: throw DependencyLookupError.NotFound(type: T.self)
         }
     }
     
-    open func register<T>(_ dependency: T, for subKey: String? = nil) throws {
+    open func register<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) throws {
         let key = makeKey(for: T.self, subKey)
         try verifyDoesNotHaveAnyRegistration(for: key)
-        registry[key] = dependency
+        set(dependencyBuilder, scope: scope, for: key)
     }
     
-    open func register<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) throws {
+    open func set<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, forSubKey subKey: String? = nil) {
         let key = makeKey(for: T.self, subKey)
-        try verifyDoesNotHaveAnyRegistration(for: key)
-        registry[key] = builder
+        set(dependencyBuilder, scope: scope, for: key)
+    }
+    
+    private func set<T>(_ dependencyBuilder: @escaping Builder<T>, scope: Scope, for key: String) {
+        switch scope {
+        case .singleton:
+            registry[key] = LazySingletonHolder(dependencyBuilder)
+        case .prototype:
+            registry[key] = dependencyBuilder
+        }
     }
 
     private func verifyDoesNotHaveAnyRegistration(for key: String) throws {
         guard registry[key] == nil else {
             throw DependencyLookupError.ImplicitOverwrite()
         }
-    }
-
-    open func set<T>(_ dependency: T, for subKey: String? = nil) {
-        registry[makeKey(for: T.self, subKey)] = dependency
-    }
-
-    open func set<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) {
-        registry[makeKey(for: T.self, subKey)] = builder
     }
     
     private func makeKey<T>(for type: T.Type, _ subKey: String? = nil) -> String {
@@ -51,6 +56,16 @@ open class DependencyLookup {
             return typeKey + key
         }
         return typeKey
+    }
+    
+    private final class LazySingletonHolder<T> {
+        
+        private(set) lazy var instance: T = builder()
+        private let builder: Builder<T>
+        
+        init(_ builder: @escaping Builder<T>) {
+            self.builder = builder
+        }
     }
 }
 
