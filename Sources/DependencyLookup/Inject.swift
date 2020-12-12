@@ -4,7 +4,7 @@ public struct Inject<T> {
     
     private let dependencyLookup: DependencyLookup
     private let subKey: String?
-    private var value: T!
+    private lazy var value: T = try! dependencyLookup.fetch(for: subKey)
     
     public init(from dependencyLookup: DependencyLookup = .default, forSubKey subKey: String? = nil) {
         self.dependencyLookup = dependencyLookup
@@ -12,12 +12,7 @@ public struct Inject<T> {
     }
     
     public var wrappedValue: T {
-        mutating get {
-            if value == nil {
-                value = try! dependencyLookup.fetch(for: subKey) as T
-            }
-            return value
-        }
+        mutating get { return value }
         set { value = newValue }
     }
 }

@@ -43,35 +43,11 @@ open class DependencyLookup {
             registry[key] = dependency
         }
     }
-    
-    @available(*, deprecated, message: "Obsolete")
-    open func register<T>(_ dependency: T, for subKey: String? = nil) throws {
-        let key = makeKey(for: T.self, subKey)
-        try verifyDoesNotHaveAnyRegistration(for: key)
-        registry[key] = dependency
-    }
-    
-    @available(*, deprecated, message: "Obsolete")
-    open func register<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) throws {
-        let key = makeKey(for: T.self, subKey)
-        try verifyDoesNotHaveAnyRegistration(for: key)
-        registry[key] = builder
-    }
 
     private func verifyDoesNotHaveAnyRegistration(for key: String) throws {
         guard registry[key] == nil else {
             throw DependencyLookupError.ImplicitOverwrite()
         }
-    }
-
-    @available(*, deprecated, message: "Obsolete")
-    open func set<T>(_ dependency: T, for subKey: String? = nil) {
-        registry[makeKey(for: T.self, subKey)] = dependency
-    }
-
-    @available(*, deprecated, message: "Obsolete")
-    open func set<T>(_ builder: @escaping Builder<T>, for subKey: String? = nil) {
-        registry[makeKey(for: T.self, subKey)] = builder
     }
     
     private func makeKey<T>(for type: T.Type, _ subKey: String? = nil) -> String {

@@ -35,22 +35,14 @@ final class DependencyLookupTests: TestCase {
     
     func testRegisterDependencyWithSingletonScope_ShouldReturnTheSameInstanceEveryTime() throws {
         let dependencyLookup = makeDependencyLookup()
-        
         try dependencyLookup.register(DOCImpl() as DOC, scope: .singleton)
-        
-        let aDOC: DOC = try dependencyLookup.fetch()
-        let theSameDOC: DOC = try dependencyLookup.fetch()
-        XCTAssertTrue(aDOC === theSameDOC)
+        try assertHasDOCWithSingletonScope(dependencyLookup)
     }
     
     func testRegisterDependencyWithSingletonScopeAndSubKey() throws {
         let dependencyLookup = makeDependencyLookup()
-        
         try dependencyLookup.register(DOCImpl() as DOC, scope: .singleton, forSubKey: someDOCSubKey)
-        
-        let aDOC: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        let theSameDOC: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        XCTAssertTrue(aDOC === theSameDOC)
+        try assertHasDOCWithSingletonScope(dependencyLookup, forSubKey: someDOCSubKey)
     }
     
     func testRegisterDependencyWithPrototypeScope_ShouldReturnNewInstanceEveryTime() throws {
@@ -58,9 +50,7 @@ final class DependencyLookupTests: TestCase {
         
         try dependencyLookup.register(DOCImpl() as DOC, scope: .prototype)
         
-        let aDOC: DOC = try dependencyLookup.fetch()
-        let anotherDOC: DOC = try dependencyLookup.fetch()
-        XCTAssertTrue(aDOC !== anotherDOC)
+        try assertHasDOCWithPrototypeScope(dependencyLookup)
     }
     
     func testGiveHasRegisteredDOCWhenCalledRegisterWithDOCOfTheSameTypeAndSubKeyThenThrowImplicitOverwriteError() throws {
@@ -71,12 +61,8 @@ final class DependencyLookupTests: TestCase {
     
     func testSetDependencyWithSingletonScope_ShouldReturnTheSameInstanceEveryTime() throws {
         let dependencyLookup = makeDependencyLookup()
-        
         dependencyLookup.set(DOCImpl() as DOC, scope: .singleton)
-        
-        let aDOC: DOC = try dependencyLookup.fetch()
-        let theSameDOC: DOC = try dependencyLookup.fetch()
-        XCTAssertTrue(aDOC === theSameDOC)
+        try assertHasDOCWithSingletonScope(dependencyLookup)
     }
     
     func testSetDependencyWithPrototypeScope_ShouldReturnNewInstanceEveryTime() throws {
@@ -84,19 +70,13 @@ final class DependencyLookupTests: TestCase {
         
         dependencyLookup.set(DOCImpl() as DOC, scope: .prototype)
         
-        let aDOC: DOC = try dependencyLookup.fetch()
-        let anotherDOC: DOC = try dependencyLookup.fetch()
-        XCTAssertTrue(aDOC !== anotherDOC)
+        try assertHasDOCWithPrototypeScope(dependencyLookup)
     }
     
     func testSetDependencyWithSingletonScopeAndSubKey() throws {
         let dependencyLookup = makeDependencyLookup()
-        
         dependencyLookup.set(DOCImpl() as DOC, scope: .singleton, forSubKey: someDOCSubKey)
-        
-        let aDOC: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        let theSameDOC: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        XCTAssertTrue(aDOC === theSameDOC)
+        try assertHasDOCWithSingletonScope(dependencyLookup, forSubKey: someDOCSubKey)
     }
     
     func testGivenHasRegisteredDependencyWhenCalledSetThenShouldReplaceRegistration() throws {
@@ -106,34 +86,22 @@ final class DependencyLookupTests: TestCase {
         try assert(dependencyLookup, contains: newDOC)
     }
     
-    // Scope+ | Lifecycle- :
-    // - singleton (lazy)
-    // - prototype
-    
-    // ----
-    
-    func testShouldRegisterBuildingClosureThatCreatesNewInstancesOnFetch() throws {
-        let dependencyLookup = makeDependencyLookup()
-
-        let builder = { DOCImpl() as DOC }
-        try dependencyLookup.register(builder, for: someDOCSubKey)
-
-        let firstDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        let secondDOCInstance: DOC = try dependencyLookup.fetch(for: someDOCSubKey)
-        XCTAssertFalse(firstDOCInstance === secondDOCInstance, "Should create new instance each time")
-    }
-
-    func testGivenHasRegisteredDependencyWhenCalledSetThenShouldSetBuildingClosure() throws {
-        let (dependencyLookup, _) = try makeDependencyLookupWithRegisteredDOCInstance(subKey: someDOCSubKey)
-        let newDOC: DOC = DOCImpl()
-        let builder = { newDOC }
-        dependencyLookup.set(builder, for: someDOCSubKey)
-        try assert(dependencyLookup, contains: newDOC, for: someDOCSubKey)
-    }
-    
     func testImplicitOverwriteErrorDescription() {
         let expectedDescription = "To explicitly replace dependency use: set(_: for:)"
         XCTAssertEqual(expectedDescription, DependencyLookupError.ImplicitOverwrite().description)
+    }
+    
+    func _testSingletonScope_ShouldInstantiateDependencyOnFirstFetch() throws {
+        let dependencyLookup = makeDependencyLookup()
+        var newInstanceCounter = 0
+        try dependencyLookup.register(DOCImpl({
+            newInstanceCounter += 1
+        }) as DOC, scope: .singleton)
+        
+        XCTAssertEqual(0, newInstanceCounter, "Should not instantiate dependency before first fetch")
+        let _ : DOC = try dependencyLookup.fetch()
+        let _ : DOC = try dependencyLookup.fetch()
+        XCTAssertEqual(1, newInstanceCounter, "Should instantiate dependency once")
     }
     
     // MARK: Inject
@@ -184,19 +152,17 @@ final class DependencyLookupTests: TestCase {
     func testInject_ShouldUseLazyFetch() throws {
         let dependencyLookup = makeDependencyLookup()
         DependencyLookup.default = dependencyLookup
-        var invokeBuilderCounter = 0
-        let builder = { () -> DOC in
-            invokeBuilderCounter += 1
-            return DOCImpl() as DOC
-        }
-        try dependencyLookup.register(builder)
+        var newInstanceCounter = 0
+        try dependencyLookup.register(DOCImpl({
+            newInstanceCounter += 1
+        }) as DOC, scope: .prototype)
         
         let client = ClientUsingDefaultDependencyLookup()
         
-        XCTAssertEqual(0, invokeBuilderCounter, "Should not call fetch at initialisation phase")
+        XCTAssertEqual(0, newInstanceCounter, "Should not call fetch at initialisation phase")
         _ = client.doc
         _ = client.doc
-        XCTAssertEqual(1, invokeBuilderCounter, "Should call fetch only once when accessed doc for the first time")
+        XCTAssertEqual(1, newInstanceCounter, "Should call fetch only once when accessed doc for the first time")
     }
 }
 
@@ -223,12 +189,28 @@ private extension DependencyLookupTests {
         let actualDependency: T = try dependencyLookup.fetch(for: subKey)
         XCTAssertTrue(dependency as AnyObject === actualDependency as AnyObject, "Doesn't contain expected dependency", line: line)
     }
+    
+    func assertHasDOCWithSingletonScope(_ dependencyLookup: DependencyLookup, forSubKey subKey: String? = nil, line: UInt = #line) throws {
+        let aDOC: DOC = try dependencyLookup.fetch(for: subKey)
+        let theSameDOC: DOC = try dependencyLookup.fetch(for: subKey)
+        XCTAssertTrue(aDOC === theSameDOC, "DOC should be singleton", line: line)
+    }
+    
+    func assertHasDOCWithPrototypeScope(_ dependencyLookup: DependencyLookup, line: UInt = #line) throws {
+        let aDOC: DOC = try dependencyLookup.fetch()
+        let anotherDOC: DOC = try dependencyLookup.fetch()
+        XCTAssertTrue(aDOC !== anotherDOC, "DOC should be prototype", line: line)
+    }
 }
 
 protocol DOC: class {
 }
 
 final class DOCImpl: DOC {
+    
+    init(_ callback: () -> Void = {}) {
+        callback()
+    }
 }
 
 final class ClientUsingLocalDependencyLookup {
