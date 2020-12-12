@@ -15,7 +15,7 @@ open class DependencyLookup {
     public init() {
     }
     
-    open func fetch<T>(for subKey: String? = nil) throws -> T {
+    open func fetch<T>(forSubKey subKey: String? = nil) throws -> T {
         let key = makeKey(for: T.self, subKey)
         switch registry[key] {
         case let singleton as LazySingletonHolder<T>: return singleton.instance

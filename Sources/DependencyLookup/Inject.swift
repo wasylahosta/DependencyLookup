@@ -4,7 +4,7 @@ public struct Inject<T> {
     
     private let dependencyLookup: DependencyLookup
     private let subKey: String?
-    private lazy var value: T = try! dependencyLookup.fetch(for: subKey)
+    private lazy var value: T = try! dependencyLookup.fetch(forSubKey: subKey)
     
     public init(from dependencyLookup: DependencyLookup = .default, forSubKey subKey: String? = nil) {
         self.dependencyLookup = dependencyLookup

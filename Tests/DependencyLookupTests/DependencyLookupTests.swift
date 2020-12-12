@@ -186,13 +186,13 @@ private extension DependencyLookupTests {
     }
     
     func assert<T>(_ dependencyLookup: DependencyLookup, contains dependency: T, for subKey: String? = nil, line: UInt = #line) throws {
-        let actualDependency: T = try dependencyLookup.fetch(for: subKey)
+        let actualDependency: T = try dependencyLookup.fetch(forSubKey: subKey)
         XCTAssertTrue(dependency as AnyObject === actualDependency as AnyObject, "Doesn't contain expected dependency", line: line)
     }
     
     func assertHasDOCWithSingletonScope(_ dependencyLookup: DependencyLookup, forSubKey subKey: String? = nil, line: UInt = #line) throws {
-        let aDOC: DOC = try dependencyLookup.fetch(for: subKey)
-        let theSameDOC: DOC = try dependencyLookup.fetch(for: subKey)
+        let aDOC: DOC = try dependencyLookup.fetch(forSubKey: subKey)
+        let theSameDOC: DOC = try dependencyLookup.fetch(forSubKey: subKey)
         XCTAssertTrue(aDOC === theSameDOC, "DOC should be singleton", line: line)
     }
     
