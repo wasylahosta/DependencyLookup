@@ -1,19 +1,19 @@
 import XCTest
 import DependencyLookup
 
-private var localDependencyLookup: DependencyLookup!
+private var localDependencyLookup: DependencyRegister!
 let someDOCSubKey = "some sub-key"
 
 final class DependencyLookupTests: TestCase {
     
     override func setUp() {
         super.setUp()
-        DependencyLookup.default = DependencyLookup()
+        DependencyRegister.default = DependencyRegister()
     }
     
     func testNotFoundErrorDescription() {
         let type = DOC.self
-        let expectedDescription = "\(DependencyLookup.self): Couldn't find instance of \"\(type)\""
+        let expectedDescription = "\(DependencyRegister.self): Couldn't find instance of \"\(type)\""
         XCTAssertEqual(expectedDescription, DependencyLookupError.NotFound(type: type).description)
     }
     
@@ -104,6 +104,43 @@ final class DependencyLookupTests: TestCase {
         XCTAssertEqual(1, newInstanceCounter, "Should instantiate dependency once")
     }
     
+    func testReferenceScope_ShouldReturnTheSameInstanceTillItHasStrongReference() throws {
+        let dependencyLookup = makeDependencyLookup()
+        
+        try dependencyLookup.register(DOCImpl() as DOC, scope: .reference)
+        
+        let aDOC: DOC = try dependencyLookup.fetch()
+        let theSameDOC: DOC = try dependencyLookup.fetch()
+        XCTAssertTrue(aDOC === theSameDOC, "Should return the same instance of DOC")
+    }
+    
+    func testReferenceScope_ShouldReturnNewInstanceWhenOldOneDied() throws {
+        let dependencyLookup = makeDependencyLookup()
+        
+        var newInstanceCounter = 0
+        try dependencyLookup.register(DOCImpl({
+            newInstanceCounter += 1
+        }) as DOC, scope: .reference)
+        
+        do {
+            let aDOC: DOC = try dependencyLookup.fetch()
+            print(aDOC)
+        }
+        let newDOC: DOC = try dependencyLookup.fetch()
+        print(newDOC)
+        XCTAssertEqual(2, newInstanceCounter, "Should have created a new instance")
+    }
+    
+    func testReferenceScope_ShouldBehaveAsPrototypeForValueTypes() throws {
+        let dependencyLookup = makeDependencyLookup()
+        
+        try dependencyLookup.register(ValueDOCImpl(value: .random(in: 0...1000000)) as ValueDOC, scope: .reference)
+        
+        let aDOC: ValueDOC = try dependencyLookup.fetch()
+        let anotherDOC: ValueDOC = try dependencyLookup.fetch()
+        XCTAssertTrue(aDOC as! ValueDOCImpl != anotherDOC as! ValueDOCImpl, "Should return new instance of ValueDOC")
+    }
+    
     // MARK: Inject
     
     func testShouldInjectDOCRegisteredInDependencyLookup() throws {
@@ -126,7 +163,7 @@ final class DependencyLookupTests: TestCase {
     func testShouldInjectDOCRegisteredByTypeAndKeyInSharedDependencyLookup() throws {
         let _ = try makeDOCRegisteredInDefaultDependencyLookup()
         let docForKey: DOC = DOCImpl()
-        try DependencyLookup.default.register(docForKey, scope: .singleton, forSubKey: someDOCSubKey)
+        try DependencyRegister.default.register(docForKey, scope: .singleton, forSubKey: someDOCSubKey)
         
         let client = ClientUsingDefaultDependencyLookupAndKey()
         
@@ -144,14 +181,14 @@ final class DependencyLookupTests: TestCase {
     }
     
     func testShouldInjectDependencyRegisteredWithPrototypeScope() throws {
-        try DependencyLookup.default.register(DOCImpl() as DOC, scope: .prototype)
+        try DependencyRegister.default.register(DOCImpl() as DOC, scope: .prototype)
         let client = ClientUsingDefaultDependencyLookup()
         _ = client.doc
     }
     
     func testInject_ShouldUseLazyFetch() throws {
         let dependencyLookup = makeDependencyLookup()
-        DependencyLookup.default = dependencyLookup
+        DependencyRegister.default = dependencyLookup
         var newInstanceCounter = 0
         try dependencyLookup.register(DOCImpl({
             newInstanceCounter += 1
@@ -168,11 +205,11 @@ final class DependencyLookupTests: TestCase {
 
 private extension DependencyLookupTests {
     
-    func makeDependencyLookup() -> DependencyLookup {
-        DependencyLookup()
+    func makeDependencyLookup() -> DependencyRegister {
+        DependencyRegister()
     }
 
-    func makeDependencyLookupWithRegisteredDOCInstance(subKey: String? = nil) throws -> (DependencyLookup, DOC) {
+    func makeDependencyLookupWithRegisteredDOCInstance(subKey: String? = nil) throws -> (DependencyRegister, DOC) {
         let dependencyLookup = makeDependencyLookup()
         let doc = DOCImpl()
         try dependencyLookup.register(doc as DOC, scope: .singleton, forSubKey: subKey)
@@ -181,29 +218,29 @@ private extension DependencyLookupTests {
     
     func makeDOCRegisteredInDefaultDependencyLookup() throws -> DOC {
         let doc = DOCImpl()
-        try DependencyLookup.default.register(doc as DOC, scope: .singleton)
+        try DependencyRegister.default.register(doc as DOC, scope: .singleton)
         return doc
     }
     
-    func assert<T>(_ dependencyLookup: DependencyLookup, contains dependency: T, for subKey: String? = nil, line: UInt = #line) throws {
+    func assert<T>(_ dependencyLookup: DependencyRegister, contains dependency: T, for subKey: String? = nil, line: UInt = #line) throws {
         let actualDependency: T = try dependencyLookup.fetch(forSubKey: subKey)
         XCTAssertTrue(dependency as AnyObject === actualDependency as AnyObject, "Doesn't contain expected dependency", line: line)
     }
     
-    func assertHasDOCWithSingletonScope(_ dependencyLookup: DependencyLookup, forSubKey subKey: String? = nil, line: UInt = #line) throws {
+    func assertHasDOCWithSingletonScope(_ dependencyLookup: DependencyRegister, forSubKey subKey: String? = nil, line: UInt = #line) throws {
         let aDOC: DOC = try dependencyLookup.fetch(forSubKey: subKey)
         let theSameDOC: DOC = try dependencyLookup.fetch(forSubKey: subKey)
         XCTAssertTrue(aDOC === theSameDOC, "DOC should be singleton", line: line)
     }
     
-    func assertHasDOCWithPrototypeScope(_ dependencyLookup: DependencyLookup, line: UInt = #line) throws {
+    func assertHasDOCWithPrototypeScope(_ dependencyLookup: DependencyRegister, line: UInt = #line) throws {
         let aDOC: DOC = try dependencyLookup.fetch()
         let anotherDOC: DOC = try dependencyLookup.fetch()
         XCTAssertTrue(aDOC !== anotherDOC, "DOC should be prototype", line: line)
     }
 }
 
-protocol DOC: class {
+protocol DOC: AnyObject {
 }
 
 final class DOCImpl: DOC {
@@ -215,18 +252,28 @@ final class DOCImpl: DOC {
 
 final class ClientUsingLocalDependencyLookup {
     
-    @Inject(from: localDependencyLookup)
+    @Injected(from: localDependencyLookup)
     var doc: DOC
 }
 
 final class ClientUsingDefaultDependencyLookup {
     
-    @Inject
+    @Injected
     var doc: DOC
 }
 
 final class ClientUsingDefaultDependencyLookupAndKey {
     
-    @Inject(forSubKey: someDOCSubKey)
+    @Injected(forSubKey: someDOCSubKey)
     var doc: DOC
+}
+
+protocol ValueDOC {
+    
+    var value: Int { get }
+}
+
+struct ValueDOCImpl: ValueDOC, Equatable {
+    
+    var value: Int
 }

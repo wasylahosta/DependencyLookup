@@ -1,25 +1,26 @@
-
-open class DependencyLookup {
+open class DependencyRegister {
     
     public enum Scope {
         case singleton
         case prototype
+        case reference
     }
     
-    public static var `default`: DependencyLookup = DependencyLookup()
+    public static var `default`: DependencyRegister = DependencyRegister()
     
     public typealias Builder<T> = () -> T
     
-    private var registry: [String: Any] = [:]
+    private var storage: [String: Any] = [:]
     
     public init() {
     }
     
     open func fetch<T>(forSubKey subKey: String? = nil) throws -> T {
         let key = makeKey(for: T.self, subKey)
-        switch registry[key] {
+        switch storage[key] {
         case let singleton as LazySingletonHolder<T>: return singleton.instance
         case let prototype as Builder<T>: return prototype()
+        case let reference as ReferenceHolder<T>: return reference.instance
         default: throw DependencyLookupError.NotFound(type: T.self)
         }
     }
@@ -38,14 +39,16 @@ open class DependencyLookup {
     private func set<T>(_ dependencyBuilder: @escaping Builder<T>, scope: Scope, for key: String) {
         switch scope {
         case .singleton:
-            registry[key] = LazySingletonHolder(dependencyBuilder)
+            storage[key] = LazySingletonHolder(dependencyBuilder)
         case .prototype:
-            registry[key] = dependencyBuilder
+            storage[key] = dependencyBuilder
+        case .reference:
+            storage[key] = ReferenceHolder(dependencyBuilder)
         }
     }
 
     private func verifyDoesNotHaveAnyRegistration(for key: String) throws {
-        guard registry[key] == nil else {
+        guard storage[key] == nil else {
             throw DependencyLookupError.ImplicitOverwrite()
         }
     }
@@ -67,6 +70,26 @@ open class DependencyLookup {
             self.builder = builder
         }
     }
+    
+    private final class ReferenceHolder<T> {
+        
+        private weak var weakInstance: AnyObject?
+        
+        var instance: T {
+            if let weakInstance = weakInstance {
+                return weakInstance as! T
+            }
+            let anInstance = builder()
+            weakInstance = anInstance as AnyObject
+            return anInstance
+        }
+        
+        private let builder: Builder<T>
+        
+        init(_ builder: @escaping Builder<T>) {
+            self.builder = builder
+        }
+    }
 }
 
 public enum DependencyLookupError {
@@ -80,7 +103,7 @@ public enum DependencyLookupError {
         }
 
         public var description: String {
-            return "\(DependencyLookup.self): Couldn't find instance of \"\(type)\""
+            return "\(DependencyRegister.self): Couldn't find instance of \"\(type)\""
         }
     }
 
