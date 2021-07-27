@@ -20,7 +20,7 @@ open class DependencyRegister {
     /// A closure that provides an instance of a dependency.
     public typealias Builder<T> = () -> T
     
-    private var storage: [String: Any] = [:]
+    @Atomic var storage: [String: Any] = [:]
     
     public init() {
     }
