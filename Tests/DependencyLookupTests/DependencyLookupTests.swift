@@ -2,7 +2,7 @@ import XCTest
 import DependencyLookup
 
 private var localDependencyRegister: DependencyRegister!
-let someDOCSubKey = "some sub-key"
+let someDOCName = "some name"
 
 final class DependencyLookupTests: TestCase {
     
@@ -39,10 +39,10 @@ final class DependencyLookupTests: TestCase {
         try assertHasDOCWithSingletonScope(dependencyRegister)
     }
     
-    func testRegisterDependencyWithSingletonScopeAndSubKey() throws {
+    func testRegisterDependencyWithSingletonScopeAndName() throws {
         let dependencyRegister = makeDependencyRegister()
-        try dependencyRegister.register(DOCImpl() as DOC, scope: .singleton, forSubKey: someDOCSubKey)
-        try assertHasDOCWithSingletonScope(dependencyRegister, forSubKey: someDOCSubKey)
+        try dependencyRegister.register(DOCImpl() as DOC, scope: .singleton, name: someDOCName)
+        try assertHasDOCWithSingletonScope(dependencyRegister, name: someDOCName)
     }
     
     func testRegisterDependencyWithPrototypeScope_ShouldReturnNewInstanceEveryTime() throws {
@@ -53,7 +53,7 @@ final class DependencyLookupTests: TestCase {
         try assertHasDOCWithPrototypeScope(dependencyRegister)
     }
     
-    func testGiveHasRegisteredDOCWhenCalledRegisterWithDOCOfTheSameTypeAndSubKeyThenThrowImplicitOverwriteError() throws {
+    func testGiveHasRegisteredDOCWhenCalledRegisterWithDOCOfTheSameTypeAndNameThenThrowImplicitOverwriteError() throws {
         let (dependencyRegister, _) = try makeDependencyRegisterWithRegisteredDOCInstance()
         assert(try dependencyRegister.register(DOCImpl() as DOC, scope: .singleton),
                throws: DependencyLookupError.ImplicitOverwrite())
@@ -73,14 +73,14 @@ final class DependencyLookupTests: TestCase {
         try assertHasDOCWithPrototypeScope(dependencyRegister)
     }
     
-    func testSetDependencyWithSingletonScopeAndSubKey() throws {
+    func testSetDependencyWithSingletonScopeAndName() throws {
         let dependencyRegister = makeDependencyRegister()
-        dependencyRegister.set(DOCImpl() as DOC, scope: .singleton, forSubKey: someDOCSubKey)
-        try assertHasDOCWithSingletonScope(dependencyRegister, forSubKey: someDOCSubKey)
+        dependencyRegister.set(DOCImpl() as DOC, scope: .singleton, name: someDOCName)
+        try assertHasDOCWithSingletonScope(dependencyRegister, name: someDOCName)
     }
     
     func testGivenHasRegisteredDependencyWhenCalledSetThenShouldReplaceRegistration() throws {
-        let (dependencyRegister, _) = try makeDependencyRegisterWithRegisteredDOCInstance(subKey: someDOCSubKey)
+        let (dependencyRegister, _) = try makeDependencyRegisterWithRegisteredDOCInstance(name: someDOCName)
         let newDOC: DOC = DOCImpl()
         
         dependencyRegister.set(newDOC, scope: .singleton)
@@ -166,7 +166,7 @@ final class DependencyLookupTests: TestCase {
     func testShouldInjectDOCRegisteredByTypeAndKeyInSharedDependencyLookup() throws {
         let _ = try makeDOCRegisteredInDefaultDependencyRegister()
         let docForKey: DOC = DOCImpl()
-        try DependencyRegister.default.register(docForKey, scope: .singleton, forSubKey: someDOCSubKey)
+        try DependencyRegister.default.register(docForKey, scope: .singleton, name: someDOCName)
         
         let client = ClientUsingDefaultDependencyRegisterAndKey()
         
@@ -227,10 +227,10 @@ private extension DependencyLookupTests {
         DependencyRegister()
     }
 
-    func makeDependencyRegisterWithRegisteredDOCInstance(subKey: String? = nil) throws -> (DependencyRegister, DOC) {
+    func makeDependencyRegisterWithRegisteredDOCInstance(name: String? = nil) throws -> (DependencyRegister, DOC) {
         let dependencyRegister = makeDependencyRegister()
         let doc = DOCImpl()
-        try dependencyRegister.register(doc as DOC, scope: .singleton, forSubKey: subKey)
+        try dependencyRegister.register(doc as DOC, scope: .singleton, name: name)
         return (dependencyRegister, doc)
     }
     
@@ -244,9 +244,9 @@ private extension DependencyLookupTests {
         XCTAssertNoThrow(try dependencyRegister.fetch() as T, "Doesn't contain expected dependency", line: line)
     }
     
-    func assertHasDOCWithSingletonScope(_ dependencyRegister: DependencyRegister, forSubKey subKey: String? = nil, line: UInt = #line) throws {
-        let aDOC: DOC = try dependencyRegister.fetch(forSubKey: subKey)
-        let theSameDOC: DOC = try dependencyRegister.fetch(forSubKey: subKey)
+    func assertHasDOCWithSingletonScope(_ dependencyRegister: DependencyRegister, name: String? = nil, line: UInt = #line) throws {
+        let aDOC: DOC = try dependencyRegister.fetch(withName: name)
+        let theSameDOC: DOC = try dependencyRegister.fetch(withName: name)
         XCTAssertTrue(aDOC === theSameDOC, "DOC should be singleton", line: line)
     }
     
@@ -281,7 +281,7 @@ final class ClientUsingDefaultDependencyRegister {
 
 final class ClientUsingDefaultDependencyRegisterAndKey {
     
-    @Injected(forSubKey: someDOCSubKey)
+    @Injected(name: someDOCName)
     var doc: DOC
 }
 
