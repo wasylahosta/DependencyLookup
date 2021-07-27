@@ -308,3 +308,12 @@ final class ValueDOCRegistrar: DependencyRegistering {
         try reg.register(ValueDOCImpl(value: 1) as ValueDOC, scope: .prototype)
     }
 }
+
+struct StructClient {
+    
+    @Injected var doc: DOC
+    
+    func foo() {
+        print(doc)
+    }
+}

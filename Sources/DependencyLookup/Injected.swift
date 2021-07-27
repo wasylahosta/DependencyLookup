@@ -1,5 +1,5 @@
 /// Lazily fetches a dependency from the default `DependencyRegister`
-@propertyWrapper public struct Injected<T> {
+@propertyWrapper public class Injected<T> {
     
     private let register: DependencyRegister
     private let name: String?
@@ -11,7 +11,7 @@
     }
     
     public var wrappedValue: T {
-        mutating get { return value }
+        get { return value }
         set { value = newValue }
     }
 }
