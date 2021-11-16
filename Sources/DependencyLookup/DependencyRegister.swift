@@ -42,11 +42,11 @@ open class DependencyRegister {
     
     /// Registers a new dependency based on its type and `name`.
     /// - Parameters:
-    ///   - dependencyBuilder: A closure that provides an instance of a dependency.
     ///   - scope: Lifecycle scope used by the `fetch` method to resolve a dependency
     ///   - name: Helps to differentiate registrations for the same dependency type. The default value is `nil`.
+    ///   - dependencyBuilder: A closure that provides an instance of a dependency.
     /// - Throws: `DependencyLookupError.ImplicitOverwrite` if registration with the same dependency type and  name already exists.
-    open func register<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, name: String? = nil) throws {
+    open func register<T>(scope: Scope, name: String? = nil, _ dependencyBuilder: @escaping Builder<T>) throws {
         let key = makeKey(for: T.self, name)
         try verifyDoesNotHaveAnyRegistration(for: key)
         set(dependencyBuilder, scope: scope, for: key)
