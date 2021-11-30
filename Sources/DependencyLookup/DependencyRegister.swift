@@ -57,7 +57,7 @@ open class DependencyRegister {
     ///   - dependencyBuilder: A closure that provides an instance of a dependency.
     ///   - scope: Lifecycle scope used by the `fetch` method to resolve a dependency
     ///   - name: Helps to differentiate registrations for the same dependency type. The default value is `nil`.
-    open func set<T>(_ dependencyBuilder: @autoclosure @escaping Builder<T>, scope: Scope, name: String? = nil) {
+    open func set<T>(scope: Scope, name: String? = nil, _ dependencyBuilder: @escaping Builder<T>) {
         let key = makeKey(for: T.self, name)
         set(dependencyBuilder, scope: scope, for: key)
     }

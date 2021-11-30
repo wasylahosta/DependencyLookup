@@ -61,21 +61,21 @@ final class DependencyLookupTests: TestCase {
     
     func testSetDependencyWithSingletonScope_ShouldReturnTheSameInstanceEveryTime() throws {
         let dependencyRegister = makeDependencyRegister()
-        dependencyRegister.set(DOCImpl() as DOC, scope: .singleton)
+        dependencyRegister.set(scope: .singleton) { DOCImpl() as DOC }
         try assertHasDOCWithSingletonScope(dependencyRegister)
     }
     
     func testSetDependencyWithPrototypeScope_ShouldReturnNewInstanceEveryTime() throws {
         let dependencyRegister = makeDependencyRegister()
         
-        dependencyRegister.set(DOCImpl() as DOC, scope: .prototype)
+        dependencyRegister.set(scope: .prototype) { DOCImpl() as DOC }
         
         try assertHasDOCWithPrototypeScope(dependencyRegister)
     }
     
     func testSetDependencyWithSingletonScopeAndName() throws {
         let dependencyRegister = makeDependencyRegister()
-        dependencyRegister.set(DOCImpl() as DOC, scope: .singleton, name: someDOCName)
+        dependencyRegister.set(scope: .singleton, name: someDOCName) { DOCImpl() as DOC }
         try assertHasDOCWithSingletonScope(dependencyRegister, name: someDOCName)
     }
     
@@ -83,7 +83,7 @@ final class DependencyLookupTests: TestCase {
         let (dependencyRegister, _) = try makeDependencyRegisterWithRegisteredDOCInstance(name: someDOCName)
         let newDOC: DOC = DOCImpl()
         
-        dependencyRegister.set(newDOC, scope: .singleton)
+        dependencyRegister.set(scope: .singleton) { newDOC }
         
         let actualDependency: DOC = try dependencyRegister.fetch()
         XCTAssertTrue(actualDependency as! DOCImpl === newDOC, "Doesn't contain expected dependency")
